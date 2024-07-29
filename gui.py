@@ -3,6 +3,7 @@ from tkinter import messagebox
 from tic_tac_toe import TicTacToe
 from q_learning_agent import QLearningAgent
 from utils import train
+from utils import load_model
 
 class TicTacToeGUI:
     def __init__(self, root):
@@ -12,6 +13,11 @@ class TicTacToeGUI:
         self.agent = QLearningAgent(alpha=0.5, gamma=0.95, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995)
         self.state = self.env.reset()
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
+        self.create_board()
+        self.load_model(self.agent, 'q_learning_model.pkl')
+
+    def load_model(self, agent, filename):
+        load_model(agent, filename)
 
     def create_board(self):
         for i in range(3):
