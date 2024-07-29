@@ -17,7 +17,8 @@ class TicTacToe:
 
         self.board[row, col] = self.current_player
         if self.check_win(self.current_player):
-            return self.board.flatten(), 1, True  # Current player wins
+            reward = 1 if self.current_player == 1 else -1
+            return self.board.flatten(), reward, True  # Current player wins
 
         if np.all(self.board != 0):
             return self.board.flatten(), 0, True  # Draw
