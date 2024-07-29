@@ -12,8 +12,6 @@ class TicTacToeGUI:
         self.agent = QLearningAgent(alpha=0.5, gamma=0.95, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995)
         self.state = self.env.reset()
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
-        self.create_board()
-        self.train_agent()
 
     def create_board(self):
         for i in range(3):
