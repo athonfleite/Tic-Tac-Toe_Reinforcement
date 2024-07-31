@@ -1,80 +1,81 @@
 import tkinter as tk
 from tkinter import messagebox
-from tic_tac_toe import TicTacToe
 from q_learning_agent import QLearningAgent
+from utils import save_model, load_model
+from tic_tac_toe import TicTacToe
 from utils import train
-from utils import load_model
 
 class TicTacToeGUI:
-    def __init__(self, root):
+    def __init__(self, root, agent):
         self.root = root
-        self.root.title("Tic-Tac-Toe with RL Agent")
-        self.env = TicTacToe()
-        self.agent = QLearningAgent(alpha=0.5, gamma=0.95, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995)
-        self.state = self.env.reset()
-        self.buttons = [[None for _ in range(3)] for _ in range(3)]
-        self.create_board()
-        self.load_model(self.agent, 'q_learning_model.pkl')
+        self.agent = agent
+        self.board = [0] * 9  # 0 = empty, 1 = player, -1 = agent
+        self.buttons = []
+        self.create_widgets()
+        self.agent_first_move()
 
-    def load_model(self, agent, filename):
-        load_model(agent, filename)
+    def create_widgets(self):
+        for i in range(9):
+            button = tk.Button(self.root, text='', font=('normal', 20, 'normal'), width=5, height=2,
+                               command=lambda i=i: self.player_move(i))
+            button.grid(row=i//3, column=i%3)
+            self.buttons.append(button)
 
-    def create_board(self):
-        for i in range(3):
-            for j in range(3):
-                button = tk.Button(self.root, text='', font='Arial 20', width=5, height=2,
-                                   command=lambda i=i, j=j: self.human_move(i, j))
-                button.grid(row=i, column=j)
-                self.buttons[i][j] = button
-
-    def train_agent(self):
-        train(self.agent, self.env, 500000)  # Increase number of training episodes
-        self.reset_board()
-
-    def reset_board(self):
-        self.state = self.env.reset()
-        for i in range(3):
-            for j in range(3):
-                self.buttons[i][j].config(text='', state=tk.NORMAL)
-
-    def human_move(self, row, col):
-        action = row * 3 + col
-        if self.env.board[row, col] == 0:
-            self.state, reward, done = self.env.step(action)
-            self.update_board()
-            if done:
-                self.end_game(reward)
+    def player_move(self, index):
+        if self.board[index] == 0:
+            self.board[index] = 1
+            self.update_button(index, 'X')
+            if self.check_winner(self.board, 1):
+                self.end_game("You win!")
+            elif 0 not in self.board:
+                self.end_game("It's a draw!")
             else:
                 self.agent_move()
 
+    def agent_first_move(self):
+        action = self.agent.select_action(self.board)
+        self.board[action] = -1
+        self.update_button(action, 'O')
+
     def agent_move(self):
-        action = self.agent.select_action(self.state)
-        self.state, reward, done = self.env.step(action)
-        self.update_board()
-        if done:
-            self.end_game(reward)
+        action = self.agent.select_action(self.board)
+        self.board[action] = -1
+        self.update_button(action, 'O')
+        if self.check_winner(self.board, -1):
+            self.end_game("You lose!")
+        elif 0 not in self.board:
+            self.end_game("It's a draw!")
 
-    def update_board(self):
-        for i in range(3):
-            for j in range(3):
-                if self.env.board[i, j] == 1:
-                    self.buttons[i][j].config(text='X')
-                elif self.env.board[i, j] == -1:
-                    self.buttons[i][j].config(text='O')
+    def update_button(self, index, text):
+        self.buttons[index].config(text=text, state=tk.DISABLED)
 
-    def end_game(self, reward):
-        if reward == 1:
-            message = "You win!"
-        elif reward == -1:
-            message = "You lose!"
-        elif reward == -10:
-            message = "Invalid move! You lose!"
-        else:
-            message = "It's a draw!"
+    def check_winner(self, board, player):
+        win_states = [
+            [board[0], board[1], board[2]],
+            [board[3], board[4], board[5]],
+            [board[6], board[7], board[8]],
+            [board[0], board[3], board[6]],
+            [board[1], board[4], board[7]],
+            [board[2], board[5], board[8]],
+            [board[0], board[4], board[8]],
+            [board[2], board[4], board[6]],
+        ]
+        return [player, player, player] in win_states
+
+    def end_game(self, message):
         messagebox.showinfo("Game Over", message)
-        self.reset_board()
+        self.root.destroy()
 
 if __name__ == "__main__":
+    agent = QLearningAgent()  # Initialize the agent first
+    try:
+        load_model(agent, 'q_learning_model.pkl')
+    except (FileNotFoundError, EOFError):
+        env = TicTacToe()
+        train(agent, env, episodes=10000, verbose=True)
+        save_model(agent, 'q_learning_model.pkl')
+    
     root = tk.Tk()
-    gui = TicTacToeGUI(root)
+    root.title("Tic Tac Toe")
+    game = TicTacToeGUI(root, agent)
     root.mainloop()
